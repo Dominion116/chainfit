@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useReadContractData } from '@/hooks/useContract'
+import { useReadContract } from 'wagmi'
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/lib/contract'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -29,7 +30,11 @@ export function Products() {
   // Read products from contract
   // Note: This assumes your contract has a getProducts() or similar function
   // You may need to adjust based on your actual contract structure
-  const { data: products, isLoading } = useReadContractData('getAllProducts', [])
+  const { data: products, isLoading } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getAllProducts',
+  })
 
   const filteredProducts = products
     ? (products as Product[]).filter((product: Product) => {

@@ -1,7 +1,7 @@
-import { useAccount } from 'wagmi'
+import { useAccount, useReadContract } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useReadContractData } from '@/hooks/useContract'
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/lib/contract'
 import { ORDER_STATUS_LABELS } from '@/lib/contract'
 import { formatEther } from 'viem'
 import { Loader2, Package } from 'lucide-react'
@@ -24,7 +24,15 @@ export function Dashboard() {
 
   // Read user orders from contract
   // Adjust function name based on your contract
-  const { data: userOrders } = useReadContractData('getUserOrders', address ? [address] : undefined)
+  const { data: userOrders } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getUserOrders',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    },
+  })
 
   useEffect(() => {
     if (userOrders) {
