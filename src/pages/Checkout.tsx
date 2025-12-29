@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAccount } from 'wagmi'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useCartStore } from '@/store/cartStore'
 import { useContract } from '@/hooks/useContract'
 import { useToast } from '@/hooks/use-toast'
@@ -16,6 +18,7 @@ export function Checkout() {
   const { writeContract, isPending, isConfirming, isConfirmed, error } = useContract()
   const { toast } = useToast()
   const [processing, setProcessing] = useState(false)
+  const [shippingAddress, setShippingAddress] = useState('')
 
   if (!isConnected) {
     return (
@@ -32,20 +35,34 @@ export function Checkout() {
   }
 
   const handleCheckout = async () => {
-    if (!address) return
+    if (!address || !shippingAddress.trim()) {
+      toast({
+        title: 'Shipping Address Required',
+        description: 'Please enter a shipping address.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     try {
       setProcessing(true)
-      const totalAmount = parseEther(getTotal())
-      const productIds = items.map((item) => BigInt(item.productId))
-      const quantities = items.map((item) => BigInt(item.quantity))
 
-      // Adjust function name and parameters based on your contract
-      await writeContract('placeOrder', [productIds, quantities], totalAmount)
+      // Place an order for each item in the cart
+      // The contract's placeOrder function takes a single productId, quantity, and shippingAddress
+      for (const item of items) {
+        const productPrice = parseEther(item.price)
+        const totalPrice = productPrice * BigInt(item.quantity)
+
+        await writeContract(
+          'placeOrder',
+          [BigInt(item.productId), BigInt(item.quantity), shippingAddress],
+          totalPrice
+        )
+      }
 
       toast({
         title: 'Transaction Submitted',
-        description: 'Your order is being processed. Please wait for confirmation.',
+        description: 'Your orders are being processed. Please wait for confirmation.',
       })
     } catch (err: any) {
       toast({
@@ -60,8 +77,8 @@ export function Checkout() {
   if (isConfirmed) {
     clearCart()
     toast({
-      title: 'Order Placed!',
-      description: 'Your order has been successfully placed.',
+      title: 'Orders Placed!',
+      description: 'Your orders have been successfully placed.',
     })
     setTimeout(() => {
       navigate('/dashboard')
@@ -69,7 +86,7 @@ export function Checkout() {
     return (
       <div className="text-center py-12">
         <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-500" />
-        <h2 className="text-2xl font-bold mb-2">Order Confirmed!</h2>
+        <h2 className="text-2xl font-bold mb-2">Orders Confirmed!</h2>
         <p className="text-muted-foreground">Redirecting to your dashboard...</p>
       </div>
     )
@@ -107,11 +124,21 @@ export function Checkout() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Payment</CardTitle>
-            <CardDescription>Pay with MetaMask</CardDescription>
+            <CardTitle>Shipping & Payment</CardTitle>
+            <CardDescription>Enter shipping address and confirm payment</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="shipping">Shipping Address</Label>
+              <Input
+                id="shipping"
+                placeholder="Enter your shipping address"
+                value={shippingAddress}
+                onChange={(e) => setShippingAddress(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div className="space-y-2 pt-4 border-t">
               <div className="flex justify-between">
                 <span>Wallet Address</span>
                 <span className="font-mono text-sm">{address}</span>
@@ -131,7 +158,7 @@ export function Checkout() {
             <Button
               className="w-full"
               onClick={handleCheckout}
-              disabled={isPending || isConfirming || processing}
+              disabled={isPending || isConfirming || processing || !shippingAddress.trim()}
             >
               {(isPending || isConfirming || processing) ? (
                 <>
@@ -143,7 +170,9 @@ export function Checkout() {
               )}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              You will be asked to confirm this transaction in your wallet.
+              {items.length > 1 
+                ? `Note: ${items.length} separate orders will be created (one per item).`
+                : 'You will be asked to confirm this transaction in your wallet.'}
             </p>
           </CardFooter>
         </Card>
@@ -151,4 +180,3 @@ export function Checkout() {
     </div>
   )
 }
-

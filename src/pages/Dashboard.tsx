@@ -1,4 +1,4 @@
-import { useAccount, useReadContract } from 'wagmi'
+import { useAccount, useReadContract, useReadContracts } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/lib/contract'
@@ -9,12 +9,13 @@ import { useEffect, useState } from 'react'
 
 interface Order {
   id: bigint
-  customer: string
-  totalAmount: bigint
+  buyer: string
+  productId: bigint
+  quantity: bigint
+  totalPrice: bigint
   status: number
   timestamp: bigint
-  productIds: bigint[]
-  quantities: bigint[]
+  shippingAddress: string
 }
 
 export function Dashboard() {
@@ -22,9 +23,8 @@ export function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Read user orders from contract
-  // Adjust function name based on your contract
-  const { data: userOrders } = useReadContract({
+  // Get user order IDs
+  const { data: orderIds } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
     functionName: 'getUserOrders',
@@ -34,24 +34,39 @@ export function Dashboard() {
     },
   })
 
+  // Fetch all order details
+  const { data: ordersData } = useReadContracts({
+    contracts: orderIds
+      ? (orderIds as bigint[]).map((orderId) => ({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi: CONTRACT_ABI,
+          functionName: 'getOrder' as const,
+          args: [orderId] as const,
+        }))
+      : [],
+    query: {
+      enabled: !!orderIds && (orderIds as bigint[]).length > 0,
+    },
+  })
+
   useEffect(() => {
-    if (userOrders) {
-      setOrders(userOrders as Order[])
+    if (ordersData) {
+      const fetchedOrders = ordersData
+        .map((result) => {
+          if (result.status === 'success' && result.data) {
+            return result.data as Order
+          }
+          return null
+        })
+        .filter((o): o is Order => o !== null)
+        .sort((a, b) => Number(b.timestamp) - Number(a.timestamp)) // Sort by newest first
+      setOrders(fetchedOrders)
+      setIsLoading(false)
+    } else if (orderIds && (orderIds as bigint[]).length === 0) {
+      setOrders([])
       setIsLoading(false)
     }
-  }, [userOrders])
-
-  // Poll for order updates
-  useEffect(() => {
-    if (!isConnected) return
-
-    const interval = setInterval(() => {
-      // Re-fetch orders to get status updates
-      // This would trigger a re-render if the data changes
-    }, 5000) // Poll every 5 seconds
-
-    return () => clearInterval(interval)
-  }, [isConnected])
+  }, [ordersData, orderIds])
 
   if (!isConnected) {
     return (
@@ -89,9 +104,10 @@ export function Dashboard() {
                 <TableRow>
                   <TableHead>Order ID</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Quantity</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Items</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -101,7 +117,9 @@ export function Dashboard() {
                     <TableCell>
                       {new Date(Number(order.timestamp) * 1000).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>{formatEther(order.totalAmount)} ETH</TableCell>
+                    <TableCell>Product #{Number(order.productId)}</TableCell>
+                    <TableCell>{Number(order.quantity)}</TableCell>
+                    <TableCell>{formatEther(order.totalPrice)} ETH</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -119,9 +137,6 @@ export function Dashboard() {
                         {ORDER_STATUS_LABELS[order.status as keyof typeof ORDER_STATUS_LABELS] || 'Unknown'}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      {order.productIds.length} item{order.productIds.length !== 1 ? 's' : ''}
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -132,4 +147,3 @@ export function Dashboard() {
     </div>
   )
 }
-
