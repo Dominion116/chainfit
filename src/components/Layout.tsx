@@ -1,13 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAccount, useDisconnect } from 'wagmi'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, User, LogOut, Settings } from 'lucide-react'
+import { ShoppingCart, LogOut } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { ConnectButton } from '@/components/ConnectButton'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
-  const { address, isConnected } = useAccount()
+  const { isConnected } = useAccount()
   const { disconnect } = useDisconnect()
   const itemCount = useCartStore((state) => state.getItemCount())
 

@@ -1,6 +1,6 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/lib/contract'
-import { Address } from 'viem'
+import type { Address } from 'viem'
 
 export function useContract() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()

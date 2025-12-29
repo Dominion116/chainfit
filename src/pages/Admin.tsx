@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useAccount, useReadContractData } from 'wagmi'
+import { useAccount, useReadContract } from 'wagmi'
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/lib/contract'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +12,7 @@ import { useContract } from '@/hooks/useContract'
 import { useToast } from '@/hooks/use-toast'
 import { CATEGORIES, ORDER_STATUS, ORDER_STATUS_LABELS } from '@/lib/contract'
 import { parseEther, formatEther } from 'viem'
-import { Plus, Loader2, Settings, DollarSign } from 'lucide-react'
+import { Plus, Loader2, DollarSign } from 'lucide-react'
 
 interface Product {
   id: number
@@ -38,10 +39,26 @@ export function Admin() {
   const { toast } = useToast()
 
   // Check if user is owner (adjust function name based on your contract)
-  const { data: isOwner } = useReadContractData('owner', [])
-  const { data: products } = useReadContractData('getAllProducts', [])
-  const { data: allOrders } = useReadContractData('getAllOrders', [])
-  const { data: contractBalance } = useReadContractData('getContractBalance', [])
+  const { data: isOwner } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'owner',
+  })
+  const { data: products } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getAllProducts',
+  })
+  const { data: allOrders } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getAllOrders',
+  })
+  const { data: contractBalance } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getContractBalance',
+  })
 
   const [newProduct, setNewProduct] = useState({
     name: '',
