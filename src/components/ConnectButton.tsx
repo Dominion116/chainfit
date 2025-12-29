@@ -1,9 +1,11 @@
+import { useAccount } from 'wagmi'
 import { useAppKit } from '@reown/appkit/react'
 import { Button } from '@/components/ui/button'
 import { Wallet } from 'lucide-react'
 
 export function ConnectButton() {
-  const { address, isConnected, open } = useAppKit()
+  const { address, isConnected } = useAccount()
+  const { open } = useAppKit()
 
   if (isConnected && address) {
     return (
