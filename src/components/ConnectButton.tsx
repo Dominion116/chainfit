@@ -1,10 +1,9 @@
-import { useAccount, useConnect } from 'wagmi'
+import { useAppKit } from '@reown/appkit/react'
 import { Button } from '@/components/ui/button'
 import { Wallet } from 'lucide-react'
 
 export function ConnectButton() {
-  const { address, isConnected } = useAccount()
-  const { connect, connectors } = useConnect()
+  const { address, isConnected, open } = useAppKit()
 
   if (isConnected && address) {
     return (
@@ -14,19 +13,10 @@ export function ConnectButton() {
     )
   }
 
-  const metaMaskConnector = connectors.find((c) => c.id === 'metaMask' || c.id === 'injected')
-
   return (
-    <Button
-      onClick={() => {
-        if (metaMaskConnector) {
-          connect({ connector: metaMaskConnector })
-        }
-      }}
-    >
+    <Button onClick={() => open()}>
       <Wallet className="h-4 w-4 mr-2" />
       Connect Wallet
     </Button>
   )
 }
-
