@@ -53,8 +53,8 @@ export function Dashboard() {
     if (ordersData) {
       const fetchedOrders = ordersData
         .map((result) => {
-          if (result.status === 'success' && result.data) {
-            return result.data as Order
+          if (result.status === 'success' && result.result) {
+            return result.result as Order
           }
           return null
         })

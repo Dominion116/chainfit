@@ -109,8 +109,8 @@ export function Admin() {
     if (productsData) {
       const fetchedProducts = productsData
         .map((result) => {
-          if (result.status === 'success' && result.data) {
-            return result.data as Product
+          if (result.status === 'success' && result.result) {
+            return result.result as Product
           }
           return null
         })
@@ -123,8 +123,8 @@ export function Admin() {
     if (ordersData) {
       const fetchedOrders = ordersData
         .map((result) => {
-          if (result.status === 'success' && result.data) {
-            return result.data as Order
+          if (result.status === 'success' && result.result) {
+            return result.result as Order
           }
           return null
         })

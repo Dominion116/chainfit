@@ -1,4 +1,4 @@
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/lib/contract'
 import type { Address } from 'viem'
 
@@ -10,13 +10,16 @@ export function useContract() {
 
   return {
     writeContract: (functionName: string, args: any[], value?: bigint) => {
-      return writeContract({
+      const config: any = {
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName,
-        args,
-        value,
-      })
+        functionName: functionName as any,
+        args: args as any,
+      }
+      if (value !== undefined) {
+        config.value = value
+      }
+      return writeContract(config)
     },
     hash,
     isPending,
@@ -25,13 +28,3 @@ export function useContract() {
     error,
   }
 }
-
-export function useReadContractData(functionName: string, args?: any[]) {
-  return useReadContract({
-    address: CONTRACT_ADDRESS as Address,
-    abi: CONTRACT_ABI,
-    functionName,
-    args,
-  })
-}
-

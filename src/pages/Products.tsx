@@ -53,9 +53,9 @@ export function Products() {
   useEffect(() => {
     if (productsData) {
       const fetchedProducts = productsData
-        .map((result, index) => {
-          if (result.status === 'success' && result.data) {
-            return result.data as Product
+        .map((result) => {
+          if (result.status === 'success' && result.result) {
+            return result.result as Product
           }
           return null
         })
