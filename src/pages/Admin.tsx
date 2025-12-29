@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useAccount, useReadContract } from 'wagmi'
+import { useState, useEffect } from 'react'
+import { useAccount, useReadContract, useReadContracts } from 'wagmi'
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/lib/contract'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,22 +15,25 @@ import { parseEther, formatEther } from 'viem'
 import { Plus, Loader2, DollarSign } from 'lucide-react'
 
 interface Product {
-  id: number
+  id: bigint
   name: string
   description: string
-  price: bigint
-  image: string
   category: number
-  stock: number
+  price: bigint
+  stock: bigint
+  imageUrl: string
   active: boolean
 }
 
 interface Order {
   id: bigint
-  customer: string
-  totalAmount: bigint
+  buyer: string
+  productId: bigint
+  quantity: bigint
+  totalPrice: bigint
   status: number
   timestamp: bigint
+  shippingAddress: string
 }
 
 export function Admin() {
@@ -38,40 +41,101 @@ export function Admin() {
   const { writeContract, isPending, isConfirming } = useContract()
   const { toast } = useToast()
 
-  // Check if user is owner (adjust function name based on your contract)
-  const { data: isOwner } = useReadContract({
+  // Check if user is owner
+  const { data: ownerAddress } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
     functionName: 'owner',
   })
-  const { data: products } = useReadContract({
+
+  // Get product count
+  const { data: productCount } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
-    functionName: 'getAllProducts',
-  })
-  const { data: allOrders } = useReadContract({
-    address: CONTRACT_ADDRESS as `0x${string}`,
-    abi: CONTRACT_ABI,
-    functionName: 'getAllOrders',
-  })
-  const { data: contractBalance } = useReadContract({
-    address: CONTRACT_ADDRESS as `0x${string}`,
-    abi: CONTRACT_ABI,
-    functionName: 'getContractBalance',
+    functionName: 'productCount',
   })
 
+  // Get order count
+  const { data: orderCount } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'orderCount',
+  })
+
+  // Fetch all products
+  const { data: productsData } = useReadContracts({
+    contracts: productCount
+      ? Array.from({ length: Number(productCount) }, (_, i) => ({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi: CONTRACT_ABI,
+          functionName: 'getProduct' as const,
+          args: [BigInt(i + 1)] as const,
+        }))
+      : [],
+    query: {
+      enabled: !!productCount && Number(productCount) > 0,
+    },
+  })
+
+  // Fetch all orders
+  const { data: ordersData } = useReadContracts({
+    contracts: orderCount
+      ? Array.from({ length: Number(orderCount) }, (_, i) => ({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi: CONTRACT_ABI,
+          functionName: 'getOrder' as const,
+          args: [BigInt(i + 1)] as const,
+        }))
+      : [],
+    query: {
+      enabled: !!orderCount && Number(orderCount) > 0,
+    },
+  })
+
+  const [products, setProducts] = useState<Product[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
     price: '',
-    image: '',
+    imageUrl: '',
     category: '0',
     stock: '',
   })
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
+  const [updatingProducts, setUpdatingProducts] = useState<Record<number, { price: string; stock: string; active: boolean }>>({})
+
+  useEffect(() => {
+    if (productsData) {
+      const fetchedProducts = productsData
+        .map((result) => {
+          if (result.status === 'success' && result.data) {
+            return result.data as Product
+          }
+          return null
+        })
+        .filter((p): p is Product => p !== null)
+      setProducts(fetchedProducts)
+    }
+  }, [productsData])
+
+  useEffect(() => {
+    if (ordersData) {
+      const fetchedOrders = ordersData
+        .map((result) => {
+          if (result.status === 'success' && result.data) {
+            return result.data as Order
+          }
+          return null
+        })
+        .filter((o): o is Order => o !== null)
+        .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+      setOrders(fetchedOrders)
+    }
+  }, [ordersData])
 
   // Check if connected address is the owner
-  const isAdmin = isConnected && address && isOwner && address.toLowerCase() === String(isOwner).toLowerCase()
+  const isAdmin = isConnected && address && ownerAddress && address.toLowerCase() === String(ownerAddress).toLowerCase()
 
   if (!isConnected) {
     return (
@@ -91,6 +155,12 @@ export function Admin() {
     )
   }
 
+  const { data: contractBalance } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getContractBalance',
+  })
+
   const handleAddProduct = async () => {
     try {
       await writeContract(
@@ -98,10 +168,10 @@ export function Admin() {
         [
           newProduct.name,
           newProduct.description,
-          newProduct.image,
           parseInt(newProduct.category),
           parseEther(newProduct.price),
           BigInt(newProduct.stock),
+          newProduct.imageUrl,
         ]
       )
       toast({
@@ -113,7 +183,7 @@ export function Admin() {
         name: '',
         description: '',
         price: '',
-        image: '',
+        imageUrl: '',
         category: '0',
         stock: '',
       })
@@ -126,17 +196,28 @@ export function Admin() {
     }
   }
 
-  const handleUpdateStock = async (productId: number, newStock: number) => {
+  const handleUpdateProduct = async (productId: number, price: string, stock: string, active: boolean) => {
     try {
-      await writeContract('updateStock', [BigInt(productId), BigInt(newStock)])
+      await writeContract('updateProduct', [
+        BigInt(productId),
+        parseEther(price),
+        BigInt(stock),
+        active,
+      ])
       toast({
-        title: 'Stock Updated',
-        description: 'Product stock has been updated.',
+        title: 'Product Updated',
+        description: 'Product has been updated successfully.',
+      })
+      // Clear the updating state for this product
+      setUpdatingProducts((prev) => {
+        const next = { ...prev }
+        delete next[productId]
+        return next
       })
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to update stock.',
+        description: error?.message || 'Failed to update product.',
         variant: 'destructive',
       })
     }
@@ -160,7 +241,7 @@ export function Admin() {
 
   const handleWithdraw = async () => {
     try {
-      await writeContract('withdraw', [])
+      await writeContract('withdrawFunds', [])
       toast({
         title: 'Withdrawal Initiated',
         description: 'Funds are being withdrawn to your wallet.',
@@ -254,11 +335,11 @@ export function Admin() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="image">Image URL</Label>
+                      <Label htmlFor="imageUrl">Image URL</Label>
                       <Input
-                        id="image"
-                        value={newProduct.image}
-                        onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
+                        id="imageUrl"
+                        value={newProduct.imageUrl}
+                        onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
                       />
                     </div>
                     <div>
@@ -315,36 +396,86 @@ export function Admin() {
                   <TableHead>Name</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
+                  <TableHead>Active</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products && (products as Product[]).map((product: Product) => (
-                  <TableRow key={Number(product.id)}>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell>{formatEther(product.price)} ETH</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={product.stock}
-                        onChange={(e) => {
-                          const newStock = parseInt(e.target.value) || 0
-                          handleUpdateStock(Number(product.id), newStock)
-                        }}
-                        className="w-20"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateStock(Number(product.id), Number(product.stock))}
-                      >
-                        Update
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {products.map((product) => {
+                  const updating = updatingProducts[Number(product.id)] || {
+                    price: formatEther(product.price),
+                    stock: String(Number(product.stock)),
+                    active: product.active,
+                  }
+                  return (
+                    <TableRow key={Number(product.id)}>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.0001"
+                          value={updating.price}
+                          onChange={(e) =>
+                            setUpdatingProducts({
+                              ...updatingProducts,
+                              [Number(product.id)]: { ...updating, price: e.target.value },
+                            })
+                          }
+                          className="w-24"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          value={updating.stock}
+                          onChange={(e) =>
+                            setUpdatingProducts({
+                              ...updatingProducts,
+                              [Number(product.id)]: { ...updating, stock: e.target.value },
+                            })
+                          }
+                          className="w-20"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={updating.active ? 'true' : 'false'}
+                          onValueChange={(value) =>
+                            setUpdatingProducts({
+                              ...updatingProducts,
+                              [Number(product.id)]: { ...updating, active: value === 'true' },
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-[100px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Active</SelectItem>
+                            <SelectItem value="false">Inactive</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleUpdateProduct(
+                              Number(product.id),
+                              updating.price,
+                              updating.stock,
+                              updating.active
+                            )
+                          }
+                          disabled={isPending || isConfirming}
+                        >
+                          Update
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -367,13 +498,13 @@ export function Admin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allOrders && (allOrders as Order[]).map((order: Order) => (
+                {orders.map((order) => (
                   <TableRow key={Number(order.id)}>
                     <TableCell className="font-mono">#{Number(order.id)}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      {String(order.customer).slice(0, 6)}...{String(order.customer).slice(-4)}
+                      {String(order.buyer).slice(0, 6)}...{String(order.buyer).slice(-4)}
                     </TableCell>
-                    <TableCell>{formatEther(order.totalAmount)} ETH</TableCell>
+                    <TableCell>{formatEther(order.totalPrice)} ETH</TableCell>
                     <TableCell>
                       <Select
                         value={String(order.status)}
@@ -411,4 +542,3 @@ export function Admin() {
     </div>
   )
 }
-
