@@ -134,6 +134,13 @@ export function Admin() {
     }
   }, [ordersData])
 
+  // Get contract balance (must be called before early returns)
+  const { data: contractBalance } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getContractBalance',
+  })
+
   // Check if connected address is the owner
   const isAdmin = isConnected && address && ownerAddress && address.toLowerCase() === String(ownerAddress).toLowerCase()
 
@@ -151,15 +158,15 @@ export function Admin() {
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
         <p className="text-muted-foreground">You must be the contract owner to access this page.</p>
+        {ownerAddress && address && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Connected: {address.slice(0, 6)}...{address.slice(-4)}<br />
+            Owner: {String(ownerAddress).slice(0, 6)}...{String(ownerAddress).slice(-4)}
+          </p>
+        )}
       </div>
     )
   }
-
-  const { data: contractBalance } = useReadContract({
-    address: CONTRACT_ADDRESS as `0x${string}`,
-    abi: CONTRACT_ABI,
-    functionName: 'getContractBalance',
-  })
 
   const handleAddProduct = async () => {
     try {
