@@ -3,12 +3,11 @@ import { base } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider } from 'wagmi'
 import { AppKitProvider } from '@reown/appkit/react'
-import { http } from 'wagmi'
 
 const queryClient = new QueryClient()
 
 // Reown AppKit Project ID
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || '35c18b84fd9706f0b560fe2ae76bf72c'
+const projectId = import.meta.env.VITE_REOWN_PROJECT_ID
 
 // Configure Reown AppKit with Wagmi adapter for Base Mainnet
 const wagmiAdapter = new WagmiAdapter({

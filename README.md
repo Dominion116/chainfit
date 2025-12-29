@@ -30,8 +30,8 @@ A modern React e-commerce frontend for ChainFit that connects to Ethereum smart 
 
 - Node.js 18+ and npm
 - A Web3 wallet (MetaMask, WalletConnect, Coinbase Wallet, etc.)
-- Access to an Ethereum network (Mainnet, Sepolia, or local)
-- Reown Project ID (get one free at [cloud.reown.com](https://cloud.reown.com))
+- Access to Base Mainnet (configured by default)
+- Reown Project ID (configured in `.env` file)
 
 ### Installation
 
@@ -46,9 +46,8 @@ npm install
 ```
 
 3. Configure Reown AppKit:
-   - Sign up at [cloud.reown.com](https://cloud.reown.com) to get your free Project ID
-   - Create a `.env` file in the root directory (copy from `.env.example`)
-   - Add your Reown Project ID: `VITE_REOWN_PROJECT_ID=your_project_id_here`
+   - The `.env` file is already configured with the Project ID
+   - If you need to change it, edit `.env` and set `VITE_REOWN_PROJECT_ID=your_project_id_here`
 
 4. Configure your smart contract:
    - Open `src/lib/contract.ts`
@@ -161,13 +160,14 @@ Create a `.env` file in the root directory with:
 You can also configure the following in `src/lib/contract.ts`:
 - Contract address
 - Contract ABI
-- Supported chains (in `src/providers/Web3Provider.tsx`)
+
+**Note:** The app is configured for **Base Mainnet**. To change networks, update `src/providers/Web3Provider.tsx`.
 
 ## Troubleshooting
 
 ### Wallet Not Connecting
 - Ensure you have a Web3 wallet installed (MetaMask, WalletConnect-compatible wallet, etc.)
-- Check that you're on a supported network
+- Check that you're connected to **Base Mainnet** (Chain ID: 8453)
 - Verify your Reown Project ID is correctly set in the `.env` file
 - Try refreshing the page
 

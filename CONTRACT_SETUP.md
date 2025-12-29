@@ -76,22 +76,26 @@ The frontend uses these function names. Make sure your contract has matching fun
 
 ## Step 5: Configure Network
 
-Update the chains in `src/providers/Web3Provider.tsx` if needed:
+The app is configured for **Base Mainnet** by default. The network configuration is in `src/providers/Web3Provider.tsx`:
 
 ```typescript
-import { mainnet, sepolia, localhost } from 'wagmi/chains'
+import { base } from 'wagmi/chains'
 
-const config = createConfig({
-  chains: [mainnet, sepolia], // Add your network here
+const wagmiAdapter = new WagmiAdapter({
+  networks: [base], // Base Mainnet (Chain ID: 8453)
   // ...
 })
 ```
+
+If you need to change networks, update the `networks` array in the Web3Provider.
 
 ## Testing
 
 After configuration:
 1. Start the dev server: `npm run dev`
-2. Connect MetaMask to the correct network
+2. Connect your wallet to **Base Mainnet** (Chain ID: 8453)
 3. Test product loading, cart, and checkout
 4. If you're the owner, test admin functions
+
+**Note:** Make sure your contract is deployed on Base Mainnet and your wallet is connected to the same network.
 
