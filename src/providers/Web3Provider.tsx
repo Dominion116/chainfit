@@ -1,20 +1,20 @@
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { mainnet, sepolia } from 'wagmi/chains'
+import { base } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider } from 'wagmi'
 import { AppKitProvider } from '@reown/appkit/react'
+import { http } from 'wagmi'
 
 const queryClient = new QueryClient()
 
-// Get project ID from environment or use placeholder
-// Sign up at https://cloud.reown.com to get your project ID
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || 'YOUR_PROJECT_ID'
+// Reown AppKit Project ID
+const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || '35c18b84fd9706f0b560fe2ae76bf72c'
 
-// Configure Reown AppKit with Wagmi adapter
+// Configure Reown AppKit with Wagmi adapter for Base Mainnet
 const wagmiAdapter = new WagmiAdapter({
   ssr: false,
   projectId,
-  networks: [mainnet, sepolia],
+  networks: [base],
 })
 
 const wagmiConfig = wagmiAdapter.wagmiConfig
@@ -33,7 +33,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <AppKitProvider
           adapters={[wagmiAdapter]}
-          networks={[mainnet, sepolia]}
+          networks={[base]}
           projectId={projectId}
           metadata={metadata}
         >
